@@ -71,12 +71,13 @@ class myNet(torch.nn.Module):
         return out
 
 							
-train_data = MyDataset(txt=os.path.join(datum_path, "train.txt"), transform=transforms.ToTensor())
+train_data = MyDataset(txt=os.path.join(datum_path, "train1.txt"), transform=transforms.ToTensor())
 test_data  = MyDataset(txt=os.path.join(datum_path, "test.txt"),  transform=transforms.ToTensor())
 train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
 test_loader  = DataLoader(dataset=test_data,  batch_size=64)
 
 model = myNet()
+model.cuda()
 
 loss_function = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters())
@@ -84,16 +85,17 @@ optimizer = torch.optim.Adam(model.parameters())
 for epoch in range(10):
     print("epoch: ", epoch)
     # train
+    model.train()
     train_loss = 0
     train_acc = 0
     train_cnt = 0
     for batch_x, batch_y in train_loader:
         # print("train_cnt: ", train_cnt)
-        batch_x, batch_y = Variable(batch_x), Variable(batch_y)
+        batch_x, batch_y = Variable(batch_x).cuda(), Variable(batch_y).cuda()
         out = model(batch_x)
         loss = loss_function(out, batch_y)
         train_loss += loss.data[0]
-        pred = torch.max(out, 1)[1]
+        pred = torch.max(out, 1)[1].cuda()
         train_correct = (pred == batch_y).sum()
         train_acc += train_correct.data[0]
         optimizer.zero_grad()
@@ -108,11 +110,13 @@ for epoch in range(10):
     eval_loss = 0
     eval_acc = 0
     for batch_x, batch_y in test_loader:
-        batch_x, batch_y = Variable(batch_x, volatile=True), Variable(batch_y, volatile=True)
+        batch_x, batch_y = Variable(batch_x, volatile=True).cuda(), Variable(batch_y, volatile=True).cuda()
         out = model(batch_x)
         loss = loss_function(out, batch_y)
         eval_loss += loss.data[0]
-        pred = torch.max(out, 1)[1]
+        pred = torch.max(out, 1)[1].cuda()
         eval_correct = (pred == batch_y).sum()
         eval_acc += eval_correct.data[0]
     print("Test loss: ", eval_loss/len(test_data), ", acc: ", eval_acc/len(test_data))
+
+torch.save(model, "model.pkl")

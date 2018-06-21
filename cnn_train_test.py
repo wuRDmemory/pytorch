@@ -3,9 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
-import cv2, os
-
-os.system("PYTHONPATH=\"\"")
+import os, cv2
 
 root = os.path.dirname(os.path.realpath(__file__))
 datum_path = os.path.join(root, "datum")
@@ -90,16 +88,31 @@ for epoch in range(10):
     train_acc = 0
     train_cnt = 0
     for batch_x, batch_y in train_loader:
-        print("train_cnt: ", train_cnt)
+        # print("train_cnt: ", train_cnt)
         batch_x, batch_y = Variable(batch_x), Variable(batch_y)
         out = model(batch_x)
         loss = loss_function(out, batch_y)
         train_loss += loss.data[0]
         pred = torch.max(out, 1)[1]
         train_correct = (pred == batch_y).sum()
-        train_acc += train_correct
-        loss.backward()
+        train_acc += train_correct.data[0]
         optimizer.zero_grad()
+        loss.backward()
         optimizer.step()
         train_cnt += len(batch_x)
     print("Train loss: ", train_loss/len(train_data), ", acc: ", train_acc/len(train_data))
+
+    # test
+    # when you want to test your model, remember change model into eval
+    model.eval()
+    eval_loss = 0
+    eval_acc = 0
+    for batch_x, batch_y in test_loader:
+        batch_x, batch_y = Variable(batch_x, volatile=True), Variable(batch_y, volatile=True)
+        out = model(batch_x)
+        loss = loss_function(out, batch_y)
+        eval_loss += loss.data[0]
+        pred = torch.max(out, 1)[1]
+        eval_correct = (pred == batch_y).sum()
+        eval_acc += eval_correct.data[0]
+    print("Test loss: ", eval_loss/len(test_data), ", acc: ", eval_acc/len(test_data))

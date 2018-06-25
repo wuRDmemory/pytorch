@@ -8,6 +8,10 @@ import os, cv2
 root = os.path.dirname(os.path.realpath(__file__))
 datum_path = os.path.join(root, "datum")
 
+use_cuda = torch.cuda.is_available()
+if use_cuda:
+    print(">>> using cuda")
+
 def default_loader(path):
     return cv2.imread(path, 1)
 
@@ -91,11 +95,15 @@ for epoch in range(10):
     train_cnt = 0
     for batch_x, batch_y in train_loader:
         # print("train_cnt: ", train_cnt)
-        batch_x, batch_y = Variable(batch_x).cuda(), Variable(batch_y).cuda()
+        batch_x, batch_y = Variable(batch_x), Variable(batch_y)
+        if use_cuda:
+            batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
         out = model(batch_x)
         loss = loss_function(out, batch_y)
         train_loss += loss.data[0]
-        pred = torch.max(out, 1)[1].cuda()
+        pred = torch.max(out, 1)[1]
+        if use_cuda:
+            pred = pred.cuda()
         train_correct = (pred == batch_y).sum()
         train_acc += train_correct.data[0]
         optimizer.zero_grad()
@@ -110,11 +118,15 @@ for epoch in range(10):
     eval_loss = 0
     eval_acc = 0
     for batch_x, batch_y in test_loader:
-        batch_x, batch_y = Variable(batch_x, volatile=True).cuda(), Variable(batch_y, volatile=True).cuda()
+        batch_x, batch_y = Variable(batch_x, volatile=True), Variable(batch_y, volatile=True)
+        if use_cuda:
+            batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
         out = model(batch_x)
         loss = loss_function(out, batch_y)
         eval_loss += loss.data[0]
-        pred = torch.max(out, 1)[1].cuda()
+        pred = torch.max(out, 1)[1]
+        if use_cuda:
+            pred = pred.cuda()
         eval_correct = (pred == batch_y).sum()
         eval_acc += eval_correct.data[0]
     print("Test loss: ", eval_loss/len(test_data), ", acc: ", eval_acc/len(test_data))
